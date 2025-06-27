@@ -46,7 +46,7 @@ fi
 # Globals:
 #   SQL_TIME
 # From Settings-file:
-#   DB_DockerName, DB_User, DB_PASSWORD
+#   DB_COMMAND, DB_DockerName, DB_User, DB_PASSWORD
 # Arguments:
 #   None
 # Outputs:
@@ -55,7 +55,7 @@ fi
 ################################################################################
 get_sql_data() {
     # Get the number of active people today:
-    MoodleActiveUsersToday="$(docker exec $DB_DockerName /usr/bin/mariadb -u$DB_User -p"$DB_PASSWORD" -NB -e "USE moodle; SELECT COUNT(*) FROM mdl_user WHERE lastaccess > $SQL_TIME" 2>/dev/null)"  # Ex: MoodleActiveUsersToday=116
+    MoodleActiveUsersToday="$(docker exec $DB_DockerName $DB_COMMAND -u$DB_User -p"$DB_PASSWORD" -NB -e "USE moodle; SELECT COUNT(*) FROM mdl_user WHERE lastaccess > $SQL_TIME" 2>/dev/null)"  # Ex: MoodleActiveUsersToday=116
 
     SQLQ="USE moodle;WITH active_people AS (
       SELECT 
@@ -118,7 +118,7 @@ get_sql_data() {
     ORDER BY 
       ap.\`active course\`, ap.ROLE;"
 
-    TableText="$(docker exec $DB_DockerName /usr/bin/mariadb -u$DB_User -p$DB_PASSWORD -NB -e "$SQLQ" | tail -n +2)"
+    TableText="$(docker exec $DB_DockerName $DB_COMMAND -u$DB_User -p$DB_PASSWORD -NB -e "$SQLQ" | tail -n +2)"
     # Ex:
     # TableText='editingteacher	EDAA01 Programmeringsteknik fördjupningskurs sommar 2025	EDAA01 sommar25	1103	358	1
     #            student	EDAA01 Programmeringsteknik fördjupningskurs sommar 2025	EDAA01 sommar25	1103	358	68

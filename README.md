@@ -56,6 +56,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
    ```bash
    box_h_bgc=22458a
    box_h_c=white
+   DB_COMMAND=/usr/bin/mariadb
    DB_DockerName=moodledb
    DB_PASSWORD=SuperSecretPassword
    DB_User=username
