@@ -17,8 +17,6 @@
 
 ## 📸 Example Output
 
-_A sample screenshot will be added here._
-
 ![Screendump of report](moodle-usage-report_example_sm.png)
 
 ---
@@ -26,7 +24,7 @@ _A sample screenshot will be added here._
 ## ⚙️  Requirements
 
 - Bash (tested with Bash 5+)
-- Access to Moodle's SQL database
+- Access to Moodle's SQL database (tested with Moodle 4.5)
 - SSH access to the report publishing server
 - Moodle with logging enabled (`mdl_logstore_standard_log`)
 
