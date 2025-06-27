@@ -48,7 +48,7 @@ _A sample screenshot will be added here._
    git clone https://github.com/peter-moller/moodle-usage-report.git
    cd moodle-usage-report
    ```
-2. Create a settings-file, `~/.` containing the following items:
+2. Create a settings-file, `~/.moodle_usage_report.settings` containing the following items:
    ```bash
    box_h_bgc=22458a
    box_h_c=white
