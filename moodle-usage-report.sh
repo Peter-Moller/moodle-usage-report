@@ -1,12 +1,18 @@
 #!/bin/bash
-#
+# Script to create a simple, yet useful, report of usage in a moodle server
+# The information is presented on a web server and it’s assumed to be updated 
+# every hour, on the hour
+# Also, a directory (with the current year as name) contains a file each of the courses is maintained.
+# The filename use the course shortname as file name, slightly edited to avoid filenames that will cause problems.
+# These files contain a number of rows, one per day (YYYY-MM-DD) and the numbers of users that have been active
+# in the course during the day. This line is updated (replaced with new values) during the day.
 
 source ~/.moodle_usage_report.settings
 CSS_colorfix="s/jobe_th_bgc/$jobe_th_bgc/g;s/jobe_th_c/$jobe_th_c/g;s/box_h_bgc/$box_h_bgc/g;s/box_h_c/$box_h_c/g"
 NL=$'\n'
 TitleString="Moodle usage report for “$ServerName” on $(date +%F" "+%T)"
-SepatarorStr="&nbsp;&nbsp;&nbsp;&diams;&nbsp;&nbsp;&nbsp;"
 export LC_ALL=en_US.UTF-8
+LinkReferer='target="_blank" rel="noopener noreferrer"'
 
 # Determine if the run time is 00:00. 
 # If so, we must have a different SQL question and present slightly different text
@@ -25,6 +31,28 @@ else
 fi
 
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#   _____   _____    ___   ______   _____       _____  ______     ______   _   _   _   _   _____   _____   _____   _____   _   _   _____
+#  /  ___| |_   _|  / _ \  | ___ \ |_   _|     |  _  | |  ___|    |  ___| | | | | | \ | | /  __ \ |_   _| |_   _| |  _  | | \ | | /  ___|
+#  \ `--.    | |   / /_\ \ | |_/ /   | |       | | | | | |_       | |_    | | | | |  \| | | /  \/   | |     | |   | | | | |  \| | \ `--.
+#   `--. \   | |   |  _  | |    /    | |       | | | | |  _|      |  _|   | | | | | . ` | | |       | |     | |   | | | | | . ` |  `--. \
+#  /\__/ /   | |   | | | | | |\ \    | |       \ \_/ / | |        | |     | |_| | | |\  | | \__/\   | |    _| |_  \ \_/ / | |\  | /\__/ /
+#  \____/    \_/   \_| |_/ \_| \_|   \_/        \___/  \_|        \_|      \___/  \_| \_/  \____/   \_/    \___/   \___/  \_| \_/ \____/
+
+
+################################################################################
+# Create a report from the Moodle Database
+# Globals:
+#   SQL_TIME
+# From Settings-file:
+#   DB_DockerName, DB_User, DB_PASSWORD
+# Arguments:
+#   None
+# Outputs:
+#   Produces 'TableText', a multi-line variable containing the 
+#   output from the database
+################################################################################
 get_sql_data() {
     # Get the number of active people today:
     MoodleActiveUsersToday="$(docker exec $DB_DockerName /usr/bin/mariadb -u$DB_User -p"$DB_PASSWORD" -NB -e "USE moodle; SELECT COUNT(*) FROM mdl_user WHERE lastaccess > $SQL_TIME" 2>/dev/null)"  # Ex: MoodleActiveUsersToday=116
@@ -99,6 +127,18 @@ get_sql_data() {
 
 }
 
+################################################################################
+# Create a HTML-table element based and
+# create/maintain a file for the specific course
+# Globals:
+#   TableText
+# From Settings-file:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   Writes the table to a temp file, 'TableHTMLFile'
+################################################################################
 generate_html_table() {
     TableHTMLFile=$(mktemp /tmp/.moodle_table_report.XXXX)
     echo "$TableText" | while IFS=$'\t' read -r role course shortname id enrolled count
@@ -119,18 +159,30 @@ generate_html_table() {
             fi
 EOF
         fi
-        CourseFullNameCell="<a href=\"https://$ServerName/course/view.php?id=$id\">$course</a>"
-        CourseShortNameCell="<a href=\"$THIS_YEAR/${MyShortname}.txt\">$shortname</a>"
+        CourseFullNameCell="<a href=\"https://$ServerName/course/view.php?id=$id\" $LinkReferer>$course</a>"
+        CourseShortNameCell="<a href=\"$THIS_YEAR/${MyShortname}.txt\" $LinkReferer>$shortname</a>"
         echo "          <tr><td align=\"left\">$CourseFullNameCell</td><td align=\"left\">$CourseShortNameCell</td><td align=\"left\">$role</td><td align=\"right\">$count</td><td align=\"right\">$enrolled</td></tr>" >> $TableHTMLFile
     done
 
     # Ex:
-    # TableHTML='          <tr><td align="left"><a href="https://moodle.cs.lth.se/course/view.php?id=1103">EDAA01 Programmeringsteknik fördjupningskurs sommar 2025</a></td><td align="left"><a href="2025/EDAA01_sommar25.txt">EDAA01 sommar25</a></td><td align="left">student</td><td align="right">8</td><td align="right">359</td></tr>
-    #                      <tr><td align="left"><a href="https://moodle.cs.lth.se/course/view.php?id=1048">EDAA30 Programmeringsteknik fortsättningskurs – Hbg – HT 2024</a></td><td align="left"><a href="2025/EDAA30_HT24.txt">EDAA30 HT24</a></td><td align="left">student</td><td align="right">1</td><td align="right">73</td></tr>
-    #                      <tr><td align="left"><a href="https://moodle.cs.lth.se/course/view.php?id=1108">EDAP10 Flertrådad programmering 2025</a></td><td align="left"><a href="2025/edap10-ht25.txt">edap10-ht25</a></td><td align="left">student</td><td align="right">1</td><td align="right">67</td></tr>
+    # TableHTML='#          <tr><td align="left"><a href="https://moodle.cs.lth.se/course/view.php?id=1029" target="_blank" rel="noopener noreferrer">EDAP10 Flertrådad programmering 2024</a></td><td align="left"><a href="2025/edap10-ht24.txt" target="_blank" rel="noopener noreferrer">edap10-ht24</a></td><td align="left">student</td><td align="right">1</td><td align="right">489</td></tr>
+    #                       <tr><td align="left"><a href="https://moodle.cs.lth.se/course/view.php?id=1108" target="_blank" rel="noopener noreferrer">EDAP10 Flertrådad programmering 2025</a></td><td align="left"><a href="2025/edap10-ht25.txt" target="_blank" rel="noopener noreferrer">edap10-ht25</a></td><td align="left">student</td><td align="right">3</td><td align="right">68</td></tr>
+    #                       <tr><td align="left"><a href="https://moodle.cs.lth.se/course/view.php?id=1035" target="_blank" rel="noopener noreferrer">Java grundkurs</a></td><td align="left"><a href="2025/open_java.txt" target="_blank" rel="noopener noreferrer">open_java</a></td><td align="left">student</td><td align="right">2</td><td align="right">185</td></tr>
+
 
 }
 
+################################################################################
+# Create the HTML page
+# Globals:
+#   TitleString, CSS_colorfix, TableHTMLFile
+# From Settings-file:
+#   ReportHead
+# Arguments:
+#   None
+# Outputs:
+#   Writes the completed file to a temp file, 'MoodleReportTemp'
+################################################################################
 assemble_web_page() {
     MoodleReportTemp=$(mktemp /tmp/moodle_report.XXXX)
     # Get the head of the custom report, replace SERVER and DATE
@@ -167,9 +219,8 @@ assemble_web_page() {
         echo '    </table>' >> "$MoodleReportTemp"
         echo '' >> "$MoodleReportTemp"
         echo "  </section>" >> "$MoodleReportTemp"
-        #echo '  <p align="center"><em>Report generated by &#8220;sql-info&#8221; (<a href="https://github.com/Peter-Moller/sql-info" '$LinkReferer'>GitHub</a> <span class="glyphicon">&#xe164;</span>)</em></p>' >> "$MoodleReportTemp"
+        echo '  <p align="center"><em>Report generated by &#8220;moodle-usage-report&#8221; (<a href="https://github.com/Peter-Moller/moodle-usage-report" '$LinkReferer'>GitHub</a> <span class="glyphicon">&#xe164;</span>)</em></p>' >> "$MoodleReportTemp"
         echo '  <p align="center"><em>Department of Computer Science, LTH/LU</em></p>' >> "$MoodleReportTemp"
-        #echo '  <p align="center" style="font-size: smaller"><em>Version: '$Version'</em></p>' >> "$MoodleReportTemp"
         echo "</div>" >> "$MoodleReportTemp"
         echo "</body>" >> "$MoodleReportTemp"
         echo "</html>" >> "$MoodleReportTemp"
@@ -182,14 +233,32 @@ assemble_web_page() {
 
 }
 
+################################################################################
+# Copy the HTML-file to remote server
+# Globals:
+#   MoodleReportTemp
+# From Settings-file:
+#   SCP_USER, SCP_HOST, SCP_DIR
+# Arguments:
+#   None
+# Outputs:
+#   Nothing
+################################################################################
 copy_result() {
     scp "${MoodleReportTemp}" "${SCP_USER}@${SCP_HOST}:${SCP_DIR}/index.html" &>/dev/null
 }
+
+#   _____   _   _  ______       _____  ______     ______   _   _   _   _   _____   _____   _____   _____   _   _   _____
+#  |  ___| | \ | | |  _  \     |  _  | |  ___|    |  ___| | | | | | \ | | /  __ \ |_   _| |_   _| |  _  | | \ | | /  ___|
+#  | |__   |  \| | | | | |     | | | | | |_       | |_    | | | | |  \| | | /  \/   | |     | |   | | | | |  \| | \ `--.
+#  |  __|  | . ` | | | | |     | | | | |  _|      |  _|   | | | | | . ` | | |       | |     | |   | | | | | . ` |  `--. \
+#  | |___  | |\  | | |/ /      \ \_/ / | |        | |     | |_| | | |\  | | \__/\   | |    _| |_  \ \_/ / | |\  | /\__/ /
+#  \____/  \_| \_/ |___/        \___/  \_|        \_|      \___/  \_| \_/  \____/   \_/    \___/   \___/  \_| \_/ \____/
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 get_sql_data
 generate_html_table
 assemble_web_page
 copy_result
-
-#cat "$MoodleReportTemp"
