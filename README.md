@@ -19,7 +19,7 @@
 
 _A sample screenshot will be added here._
 
-!Example report
+![Screendump of report](moodle-usage-report_example_sm.png)
 
 ---
 
