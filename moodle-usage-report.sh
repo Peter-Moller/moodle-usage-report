@@ -125,6 +125,14 @@ get_sql_data() {
     #            editingteacher	EDAA01/TFRD49 Programmeringsteknik fördjupningskurs VT 2025	EDAA01/TFRD49 VT25	1082	489	1
     #            student	TFRD90 Design och kognitiv tillgänglighet (HT23)	Design och kognitiv tillgänglighet (HT23)	1057	33	1'
 
+    # Get the number of courses as well:
+    NumCourses=$(echo "$TableText" | awk -F $'\t' '{print $2}' | sort -u | wc -l)        # Ex: NumCourses=28
+    if [ $NumCourses -gt 5 ]; then
+        CourseText="and been active in <strong>$NumCourses</strong> courses "
+    else
+        CourseText=""
+    fi
+
 }
 
 ################################################################################
@@ -207,7 +215,7 @@ assemble_web_page() {
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
         echo '    <p align="left">Below is a presentation of a <code>SQL</code>-question put to the moodle database that aggregates the numbers of various roles that have been active in the moodle server '$DayText'.</p>' >> "$MoodleReportTemp"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
-        echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$DayText'. </p>' >> "$MoodleReportTemp"
+        echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. </p>' >> "$MoodleReportTemp"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
 	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. The table is sorted alphabetically by “Course fullname” and it, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportTemp"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
