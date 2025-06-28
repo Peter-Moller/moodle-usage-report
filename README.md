@@ -14,7 +14,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
 
 - Tracks user activity per course and role
 - Publishes daily reports with one line per day
-- Designed for Moodle servers running in Docker
+- Supports Moodle servers running in Docker
 - Minimal dependencies: just `bash` and `SQL`
 - Easy to automate via `cron`
 - Output can be integrated into dashboards or shared via web
@@ -59,8 +59,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
    box_h_bgc=22458a
    box_h_c=white
    COURSE_ID_TO_HIDE="1234, 102"
-   DB_COMMAND=/usr/bin/mariadb
-   DB_DockerName=moodledb
+   DB_COMMAND="docker exec moodledb /usr/bin/mariadb"
    DB_PASSWORD=SuperSecretPassword
    DB_User=username
    jobe_th_bgc=22458a
