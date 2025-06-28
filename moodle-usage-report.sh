@@ -294,7 +294,12 @@ copy_result() {
 ################################################################################
 day_total_users() {
     if [ "$DayTurn" = "true" ]; then
-        ssh ${SCP_USER}@${SCP_HOST} "echo \"$TODAY	$MoodleActiveUsersToday\" >> ${SCP_DIR}/Total_users_$THIS_YEAR.txt" &>/dev/null
+        if [ $TODAY -eq 7 ]; then
+            local SundayMarking='*'
+        else
+            local SundayMarking=''
+        fi
+        ssh ${SCP_USER}@${SCP_HOST} "echo \"$TODAY$SundayMarking	$MoodleActiveUsersToday\" >> ${SCP_DIR}/Total_users_$THIS_YEAR.txt" &>/dev/null
     fi
 }
 
