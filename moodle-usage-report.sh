@@ -118,12 +118,19 @@ get_sql_data() {
     ORDER BY 
       ap.\`active course\`, ap.ROLE;"
 
-    TableText="$(docker exec $DB_DockerName $DB_COMMAND -u$DB_User -p$DB_PASSWORD -NB -e "$SQLQ" | tail -n +2)"
+    TableTextRaw="$(docker exec $DB_DockerName $DB_COMMAND -u$DB_User -p$DB_PASSWORD -NB -e "$SQLQ" | tail -n +2)"
     # Ex:
-    # TableText='editingteacher	EDAA01 Programmeringsteknik fördjupningskurs sommar 2025	EDAA01 sommar25	1103	358	1
-    #            student	EDAA01 Programmeringsteknik fördjupningskurs sommar 2025	EDAA01 sommar25	1103	358	68
-    #            editingteacher	EDAA01/TFRD49 Programmeringsteknik fördjupningskurs VT 2025	EDAA01/TFRD49 VT25	1082	489	1
-    #            student	TFRD90 Design och kognitiv tillgänglighet (HT23)	Design och kognitiv tillgänglighet (HT23)	1057	33	1'
+    # TableTextRaw='editingteacher	EDAA01 Programmeringsteknik fördjupningskurs sommar 2025	EDAA01 sommar25	1103	358	1
+    #               student	EDAA01 Programmeringsteknik fördjupningskurs sommar 2025	EDAA01 sommar25	1103	358	68
+    #               editingteacher	EDAA01/TFRD49 Programmeringsteknik fördjupningskurs VT 2025	EDAA01/TFRD49 VT25	1082	489	1
+    #               student	TFRD90 Design och kognitiv tillgänglighet (HT23)	Design och kognitiv tillgänglighet (HT23)	1057	33	1'
+    
+    # Filter out courses that should be hidden:
+    if [ -n "$COURSE_ID_TO_HIDE" ]; then
+        TableText="$(echo "$TableTextRaw" | grep -Ev "${COURSE_ID_TO_HIDE//[, ]/|}")"
+    else
+        TableText="$TableTextRaw"
+    fi
 
     # Get the number of courses as well:
     NumCourses=$(echo "$TableText" | awk -F $'\t' '{print $2}' | sort -u | wc -l)        # Ex: NumCourses=28

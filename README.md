@@ -18,6 +18,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
 - Minimal dependencies: just `bash` and `SQL`
 - Easy to automate via `cron`
 - Output can be integrated into dashboards or shared via web
+- If a user want to hide one or more courses in the printout, write the course id (numerical value) into the settings variable `COURSE_ID_TO_HIDE` as a comma-separated list
 
 ---
 
@@ -56,6 +57,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
    ```bash
    box_h_bgc=22458a
    box_h_c=white
+   COURSE_ID_TO_HIDE="1234, 102"
    DB_COMMAND=/usr/bin/mariadb
    DB_DockerName=moodledb
    DB_PASSWORD=SuperSecretPassword
