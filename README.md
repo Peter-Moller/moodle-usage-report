@@ -40,7 +40,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
 
 ## 📦 Deployment Notes
 
-- Works best on Moodle servers running in Docker.
+- Can be extended with local script (running as same user, so use it wisely).
 - The report is written to a remote server via SSH and updated daily.
 - Each report file contains one line per day, updated hourly.
 
@@ -54,7 +54,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
    git clone https://github.com/peter-moller/moodle-usage-report.git
    cd moodle-usage-report
    ```
-2. Create a settings-file, `~/.moodle_usage_report.settings` containing the following items:
+2. Create a settings-file, `~/.moodle_usage_report.settings` containing the following items (customise to your local need):
    ```bash
    box_h_bgc=22458a
    box_h_c=white
