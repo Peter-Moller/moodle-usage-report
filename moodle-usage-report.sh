@@ -229,7 +229,7 @@ assemble_web_page() {
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
         echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. </p>' >> "$MoodleReportTemp"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
-	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. The table is sorted alphabetically by “Course fullname” and it, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportTemp"
+	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. You can sort the table by clicking on the column headers. This page, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportTemp"
         echo '    <p>&nbsp;</p>' >> "$MoodleReportTemp"
 	    echo '    <p>Search for course: <input id="searchbar" onkeyup="search_course()" type="text"	name="search" placeholder="Search..."></p>' >> "$MoodleReportTemp"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
