@@ -19,6 +19,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
 - Easy to automate via `cron`
 - Output can be integrated into dashboards or shared via web
 - If a user want to hide one or more courses in the printout, write the course id (numerical value) into the settings variable `COURSE_ID_TO_HIDE` as a comma-separated list
+- If local processing needs to be done on the material, an external script can be specified in the `LOCAL_PROCESSING` settings variable. (We use this to feed our departmental monitoring system with data from this script). This is done by using `source` and thus all variables in this script may be used by the extension
 
 ---
 
@@ -64,6 +65,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
    DB_User=username
    jobe_th_bgc=22458a
    jobe_th_c=white
+   LOCAL_PROCESSING="/some/path/to/script"
    ReportHead=https://fileadmin.cs.lth.se/intern/backup/custom_report_head.html
    ServerName=moodle.example.dns
    SCP_HOST=web-server.some.dns

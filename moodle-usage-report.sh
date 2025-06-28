@@ -132,6 +132,11 @@ get_sql_data() {
         TableText="$TableTextRaw"
     fi
 
+    # If some extra processing is to be done (via 'LOCAL_PROCESSING'), do it here
+    if [ -n "$LOCAL_PROCESSING" ] && [ -f "$LOCAL_PROCESSING" ]; then
+        source "$LOCAL_PROCESSING"
+    fi
+
     # Get the number of courses as well:
     NumCourses=$(echo "$TableText" | awk -F $'\t' '{print $2}' | sort -u | wc -l)        # Ex: NumCourses=28
     if [ $NumCourses -gt 5 ]; then
