@@ -22,6 +22,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
 - If local processing needs to be done on the material, an external script can be specified in the `LOCAL_PROCESSING` settings variable. (We use this to feed our departmental monitoring system with data from this script). This is done by using `source` and thus all variables in this script may be used by the extension
 - Columns can be sorted by clicking the column headers
 - Courses can be searched
+- Maintains a textfile with the total number of users per day
 
 ---
 

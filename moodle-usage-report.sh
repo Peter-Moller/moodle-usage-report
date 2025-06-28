@@ -39,6 +39,7 @@ fi
 #   `--. \   | |   |  _  | |    /    | |       | | | | |  _|      |  _|   | | | | | . ` | | |       | |     | |   | | | | | . ` |  `--. \
 #  /\__/ /   | |   | | | | | |\ \    | |       \ \_/ / | |        | |     | |_| | | |\  | | \__/\   | |    _| |_  \ \_/ / | |\  | /\__/ /
 #  \____/    \_/   \_| |_/ \_| \_|   \_/        \___/  \_|        \_|      \___/  \_| \_/  \____/   \_/    \___/   \___/  \_| \_/ \____/
+#
 
 
 ################################################################################
@@ -147,13 +148,41 @@ get_sql_data() {
 
 }
 
+
+################################################################################
+# Copy a single course file to the remote server
+# Globals:
+#   TODAY, count, MyShortname, THIS_YEAR
+# From Settings-file:
+#   SCP_USER, SCP_HOST, SCP_DIR
+# Arguments:
+#   None
+# Outputs:
+#   Noting
+################################################################################
+copy_course_page() {
+    ssh "${SCP_USER}@${SCP_HOST}" > /dev/null 2>&1 << EOF
+    FILE="${SCP_DIR}/${THIS_YEAR}/${MyShortname}.txt"
+    if [ ! -f "\$FILE" ]; then
+        echo -e "${TODAY}  $count" > "\$FILE"
+    else
+        if grep -q "^${TODAY}" "\$FILE"; then
+            sed -i "/^${TODAY}/c\\${TODAY}  $count" "\$FILE"
+        else
+            echo -e "${TODAY}  $count" >> "\$FILE"
+        fi
+    fi
+EOF
+}
+
+
 ################################################################################
 # Create a HTML-table element based and
 # create/maintain a file for the specific course
 # Globals:
-#   TableText
+#   TableText, shortname, LinkReferer, course
 # From Settings-file:
-#   None
+#   ServerName
 # Arguments:
 #   None
 # Outputs:
@@ -164,33 +193,16 @@ generate_html_table() {
     echo "$TableText" | while IFS=$'\t' read -r role course shortname id enrolled count
     do
         if [ "$role" = "student" ]; then
-        MyShortname="$(echo "$shortname" | sed 's:[ /]:_:g; s/[åä]/a/g; s/ö/o/g')"                      # Ex: MyShortname=EDAA10_-_HT24_-_Hbg
-        #ssh ${SCP_USER}@${SCP_HOST} -t "echo \"$TODAY   $count\" >> ${SCP_DIR}/$THIS_YEAR/${MyShortname}.txt"
-        ssh "${SCP_USER}@${SCP_HOST}" > /dev/null 2>&1 << EOF
-            FILE="${SCP_DIR}/${THIS_YEAR}/${MyShortname}.txt"
-            if [ ! -f "\$FILE" ]; then
-                echo -e "${TODAY}  $count" > "\$FILE"
-            else
-                if grep -q "^${TODAY}" "\$FILE"; then
-                    sed -i "/^${TODAY}/c\\${TODAY}  $count" "\$FILE"
-                else
-                    echo -e "${TODAY}  $count" >> "\$FILE"
-                fi
-            fi
-EOF
+            MyShortname="$(echo "$shortname" | sed 's:[ /]:_:g; s/[åä]/a/g; s/ö/o/g')"                      # Ex: MyShortname=EDAA10_-_HT24_-_Hbg
+            copy_course_page
         fi
         CourseFullNameCell="<a href=\"https://$ServerName/course/view.php?id=$id\" $LinkReferer>$course</a>"
         CourseShortNameCell="<a href=\"$THIS_YEAR/${MyShortname}.txt\" $LinkReferer>$shortname</a>"
-        echo "          <tr class="course"><td align=\"left\">$CourseFullNameCell</td><td align=\"left\">$CourseShortNameCell</td><td align=\"left\">$role</td><td align=\"right\">$count</td><td align=\"right\">$enrolled</td></tr>" >> $TableHTMLFile
+        echo '          <tr class="course"><td align="left">'$CourseFullNameCell'</td><td align="left">'$CourseShortNameCell'</td><td align="left">'$role'</td><td align="right">'$count'</td><td align="right">'$enrolled'</td></tr>' >> $TableHTMLFile
     done
 
-    # Ex:
-    # TableHTML='#          <tr><td align="left"><a href="https://moodle.cs.lth.se/course/view.php?id=1029" target="_blank" rel="noopener noreferrer">EDAP10 Flertrådad programmering 2024</a></td><td align="left"><a href="2025/edap10-ht24.txt" target="_blank" rel="noopener noreferrer">edap10-ht24</a></td><td align="left">student</td><td align="right">1</td><td align="right">489</td></tr>
-    #                       <tr><td align="left"><a href="https://moodle.cs.lth.se/course/view.php?id=1108" target="_blank" rel="noopener noreferrer">EDAP10 Flertrådad programmering 2025</a></td><td align="left"><a href="2025/edap10-ht25.txt" target="_blank" rel="noopener noreferrer">edap10-ht25</a></td><td align="left">student</td><td align="right">3</td><td align="right">68</td></tr>
-    #                       <tr><td align="left"><a href="https://moodle.cs.lth.se/course/view.php?id=1035" target="_blank" rel="noopener noreferrer">Java grundkurs</a></td><td align="left"><a href="2025/open_java.txt" target="_blank" rel="noopener noreferrer">open_java</a></td><td align="left">student</td><td align="right">2</td><td align="right">185</td></tr>
-
-
 }
+
 
 ################################################################################
 # Create the HTML page
@@ -220,9 +232,6 @@ assemble_web_page() {
         echo "  </div>" >> "$MoodleReportTemp"
         echo "  <section>" >> "$MoodleReportTemp"
         echo "    <p>&nbsp;</p>" >> "$MoodleReportTemp"
-        #echo "    <p align=\"left\"> Report generated by script: <code>${ScriptFullName}</code><br>" >> "$MoodleReportTemp"
-        #echo "      Script launched $ScriptLaunchText by: <code>${ScriptLauncher:---no launcher detected--}</code> </p>" >> "$MoodleReportTemp"
-        #echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
         echo '    <p align="left">Below is a presentation of a <code>SQL</code>-question put to the moodle database that aggregates the numbers of various roles that have been active in the moodle server '$DayText'.</p>' >> "$MoodleReportTemp"
@@ -255,6 +264,7 @@ assemble_web_page() {
 
 }
 
+
 ################################################################################
 # Copy the HTML-file to remote server
 # Globals:
@@ -270,6 +280,26 @@ copy_result() {
     scp "${MoodleReportTemp}" "${SCP_USER}@${SCP_HOST}:${SCP_DIR}/index.html" &>/dev/null
 }
 
+
+################################################################################
+# At the turn of the day, add one row to the 'total' file
+# Globals:
+#   DayTurn, MoodleActiveUsersToday, TODAY, THIS_YEAR
+# From Settings-file:
+#   SCP_USER, SCP_HOST, SCP_DIR
+# Arguments:
+#   None
+# Outputs:
+#   Nothing
+################################################################################
+day_total_users() {
+    if [ "$DayTurn" = "true" ]; then
+        ssh ${SCP_USER}@${SCP_HOST} "echo \"$TODAY	$MoodleActiveUsersToday\" >> ${SCP_DIR}/Total_users_$THIS_YEAR.txt" &>/dev/null
+    fi
+}
+
+
+#
 #   _____   _   _  ______       _____  ______     ______   _   _   _   _   _____   _____   _____   _____   _   _   _____
 #  |  ___| | \ | | |  _  \     |  _  | |  ___|    |  ___| | | | | | \ | | /  __ \ |_   _| |_   _| |  _  | | \ | | /  ___|
 #  | |__   |  \| | | | | |     | | | | | |_       | |_    | | | | |  \| | | /  \/   | |     | |   | | | | |  \| | \ `--.
@@ -284,3 +314,4 @@ get_sql_data
 generate_html_table
 assemble_web_page
 copy_result
+day_total_users
