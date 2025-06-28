@@ -181,7 +181,7 @@ EOF
         fi
         CourseFullNameCell="<a href=\"https://$ServerName/course/view.php?id=$id\" $LinkReferer>$course</a>"
         CourseShortNameCell="<a href=\"$THIS_YEAR/${MyShortname}.txt\" $LinkReferer>$shortname</a>"
-        echo "          <tr><td align=\"left\">$CourseFullNameCell</td><td align=\"left\">$CourseShortNameCell</td><td align=\"left\">$role</td><td align=\"right\">$count</td><td align=\"right\">$enrolled</td></tr>" >> $TableHTMLFile
+        echo "          <tr class="course"><td align=\"left\">$CourseFullNameCell</td><td align=\"left\">$CourseShortNameCell</td><td align=\"left\">$role</td><td align=\"right\">$count</td><td align=\"right\">$enrolled</td></tr>" >> $TableHTMLFile
     done
 
     # Ex:
@@ -230,10 +230,12 @@ assemble_web_page() {
         echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. </p>' >> "$MoodleReportTemp"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
 	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. The table is sorted alphabetically by “Course fullname” and it, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportTemp"
+        echo '    <p>&nbsp;</p>' >> "$MoodleReportTemp"
+	    echo '    <p>Search for course: <input id="searchbar" onkeyup="search_course()" type="text"	name="search" placeholder="Search..."></p>' >> "$MoodleReportTemp"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
         echo '    <table id="jobe">' >> "$MoodleReportTemp"
         echo '      <tbody>' >> "$MoodleReportTemp"
-        echo '          <tr><th>Course fullname</th><th>Course shortname</th><th>Role</th><th align="right">Count</th><th align="right">Enrolled</th></tr>' >> "$MoodleReportTemp"
+        echo '          <tr><th onclick="sortTable(0)">Course fullname</th><th onclick="sortTable(1)">Course shortname</th><th onclick="sortTable(2)">Role</th><th align="right" onclick="sortTable(3)">Count</th><th align="right" onclick="sortTable(4)">Enrolled</th></tr>' >> "$MoodleReportTemp"
         cat "$TableHTMLFile" >> "$MoodleReportTemp"
         echo '      </tbody>' >> "$MoodleReportTemp"
         echo '    </table>' >> "$MoodleReportTemp"

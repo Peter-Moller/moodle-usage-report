@@ -20,6 +20,8 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
 - Output can be integrated into dashboards or shared via web
 - If a user want to hide one or more courses in the printout, write the course id (numerical value) into the settings variable `COURSE_ID_TO_HIDE` as a comma-separated list
 - If local processing needs to be done on the material, an external script can be specified in the `LOCAL_PROCESSING` settings variable. (We use this to feed our departmental monitoring system with data from this script). This is done by using `source` and thus all variables in this script may be used by the extension
+- Columns can be sorted by clicking the column headers
+- Courses can be searched
 
 ---
 
@@ -65,7 +67,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
    jobe_th_bgc=22458a
    jobe_th_c=white
    LOCAL_PROCESSING="/some/path/to/script"
-   ReportHead=https://fileadmin.cs.lth.se/intern/backup/custom_report_head.html
+   ReportHead=https://fileadmin.cs.lth.se/intern/backup/custom_report_head_sorting.html
    ServerName=moodle.example.dns
    SCP_HOST=web-server.some.dns
    SCP_DIR=/some/dir/moodle
