@@ -68,7 +68,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
    jobe_th_bgc=22458a
    jobe_th_c=white
    LOCAL_PROCESSING="/some/path/to/script"
-   ReportHead=https://fileadmin.cs.lth.se/intern/backup/custom_report_head_sorting.html
+   ReportHead=https://fileadmin.cs.lth.se/intern/html/custom_report_head_sorting.html
    ServerName=moodle.example.dns
    SCP_HOST=web-server.some.dns
    SCP_DIR=/some/dir/moodle
