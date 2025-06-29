@@ -21,6 +21,11 @@ if [ $(date +%H) -eq 0 ]; then
     DayText="during $(date +%F -d '1 day ago')"
     DayTurn=true
     TODAY=$(date +%F -d'1 day ago')    # Ex: TODAY=2025-06-25
+    if [ $(date +%u -d'1 day ago') -eq 7 ]; then
+        local SundayMarking='Sunday'
+    else
+        local SundayMarking=''
+    fi
     THIS_YEAR=$(date +%G -d'1 day ago') 
 else
     SQL_TIME="UNIX_TIMESTAMP(CURDATE())"
@@ -28,6 +33,11 @@ else
     DayTurn="false"
     TODAY=$(date +%F)                  # Ex: TODAY=2025-06-26
     THIS_YEAR=$(date +%G)              # Ex: THIS_YEAR=2025
+    if [ $(date +%u) -eq 7 ]; then
+        local SundayMarking='Sunday'
+    else
+        local SundayMarking=''
+    fi
 fi
 
 
@@ -40,6 +50,24 @@ fi
 #  /\__/ /   | |   | | | | | |\ \    | |       \ \_/ / | |        | |     | |_| | | |\  | | \__/\   | |    _| |_  \ \_/ / | |\  | /\__/ /
 #  \____/    \_/   \_| |_/ \_| \_|   \_/        \___/  \_|        \_|      \___/  \_| \_/  \____/   \_/    \___/   \___/  \_| \_/ \____/
 #
+
+
+################################################################################
+# Make sure all directories are created
+# Globals:
+#   THIS_YEAR
+# From Settings-file:
+#   LOCAL_DIR
+# Arguments:
+#   None
+# Outputs:
+#   Nothing
+################################################################################
+check_directories() {
+    if [ ! -d "$LOCAL_DIR/$THIS_YEAR" ]; then
+        mkdir -p "$LOCAL_DIR/$THIS_YEAR"
+    fi
+}
 
 
 ################################################################################
@@ -150,29 +178,27 @@ get_sql_data() {
 
 
 ################################################################################
-# Copy a single course file to the remote server
+# Create a single course file
 # Globals:
 #   TODAY, count, MyShortname, THIS_YEAR
 # From Settings-file:
-#   SCP_USER, SCP_HOST, SCP_DIR
+#   LOCAL_DIR
 # Arguments:
 #   None
 # Outputs:
 #   Noting
 ################################################################################
-copy_course_page() {
-    ssh "${SCP_USER}@${SCP_HOST}" > /dev/null 2>&1 << EOF
-    FILE="${SCP_DIR}/${THIS_YEAR}/${MyShortname}.txt"
-    if [ ! -f "\$FILE" ]; then
-        echo -e "${TODAY}  $count" > "\$FILE"
+fix_course_page() {
+    local FILE="${LOCAL_DIR}/${THIS_YEAR}/${MyShortname}.txt"
+    if [ ! -f "$FILE" ]; then
+        echo -e "${TODAY}  $count	$SundayMarking" > "$FILE"
     else
         if grep -q "^${TODAY}" "\$FILE"; then
-            sed -i "/^${TODAY}/c\\${TODAY}  $count" "\$FILE"
+            sed -i "/^${TODAY}/c\\${TODAY}  $count	$SundayMarking" "$FILE"
         else
-            echo -e "${TODAY}  $count" >> "\$FILE"
+            echo -e "${TODAY}  $count	$SundayMarking" >> "$FILE"
         fi
     fi
-EOF
 }
 
 
@@ -186,19 +212,19 @@ EOF
 # Arguments:
 #   None
 # Outputs:
-#   Writes the table to a temp file, 'TableHTMLFile'
+#   Writes the table to a temp file, 'TableTempFile'
 ################################################################################
 generate_html_table() {
-    TableHTMLFile=$(mktemp /tmp/.moodle_table_report.XXXX)
+    TableTempFile=$(mktemp /tmp/.moodle_table_report.XXXX)
     echo "$TableText" | while IFS=$'\t' read -r role course shortname id enrolled count
     do
         if [ "$role" = "student" ]; then
             MyShortname="$(echo "$shortname" | sed 's:[ /]:_:g; s/[åä]/a/g; s/ö/o/g')"                      # Ex: MyShortname=EDAA10_-_HT24_-_Hbg
-            copy_course_page
+            fix_course_page
         fi
         CourseFullNameCell="<a href=\"https://$ServerName/course/view.php?id=$id\" $LinkReferer>$course</a>"
         CourseShortNameCell="<a href=\"$THIS_YEAR/${MyShortname}.txt\" $LinkReferer>$shortname</a>"
-        echo '          <tr class="course"><td align="left">'$CourseFullNameCell'</td><td align="left">'$CourseShortNameCell'</td><td align="left">'$role'</td><td align="right">'$count'</td><td align="right">'$enrolled'</td></tr>' >> $TableHTMLFile
+        echo '          <tr class="course"><td align="left">'$CourseFullNameCell'</td><td align="left">'$CourseShortNameCell'</td><td align="left">'$role'</td><td align="right">'$count'</td><td align="right">'$enrolled'</td></tr>' >> $TableTempFile
     done
 
 }
@@ -207,66 +233,66 @@ generate_html_table() {
 ################################################################################
 # Create the HTML page
 # Globals:
-#   TitleString, CSS_colorfix, TableHTMLFile
+#   TitleString, CSS_colorfix, TableTempFile
 # From Settings-file:
 #   ReportHead
 # Arguments:
 #   None
 # Outputs:
-#   Writes the completed file to a temp file, 'MoodleReportTemp'
+#   Writes the completed file to a temp file, 'MoodleReportFile'
 ################################################################################
 assemble_web_page() {
-    MoodleReportTemp=$(mktemp /tmp/moodle_report.XXXX)
+    MoodleReportFile=$LOCAL_DIR/index.html
     # Get the head of the custom report, replace SERVER and DATE
-    curl --silent $ReportHead | sed "s/TITLE/$TitleString/;$CSS_colorfix;s/Backup/SQL/;s/1200/1250/" >> "$MoodleReportTemp"
+    curl --silent $ReportHead | sed "s/TITLE/$TitleString/;$CSS_colorfix;s/Backup/SQL/;s/1200/1250/" > "$MoodleReportFile"
     # Only continue if it worked
-    if grep "Moodle usage report for" "$MoodleReportTemp" &>/dev/null ; then
-        echo "<body>" >> "$MoodleReportTemp"
-        echo '<div class="main_page">' >> "$MoodleReportTemp"
-        echo '  <div class="flexbox-container">' >> "$MoodleReportTemp"
-        echo '    <div id="box-header">' >> "$MoodleReportTemp"
-        echo "      <h3>Moodle usage report for</h3>" >> "$MoodleReportTemp"
-        echo "      <h1>$ServerName</h1>" >> "$MoodleReportTemp"
-        echo "      <h4>$(date "+%Y-%m-%d %R")</h4>" >> "$MoodleReportTemp"
-        echo "    </div>" >> "$MoodleReportTemp"
-        echo "  </div>" >> "$MoodleReportTemp"
-        echo "  <section>" >> "$MoodleReportTemp"
-        echo "    <p>&nbsp;</p>" >> "$MoodleReportTemp"
-        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
-        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
-        echo '    <p align="left">Below is a presentation of a <code>SQL</code>-question put to the moodle database that aggregates the numbers of various roles that have been active in the moodle server '$DayText'.</p>' >> "$MoodleReportTemp"
-        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
-        echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. </p>' >> "$MoodleReportTemp"
-        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
-	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. You can sort the table by clicking on the column headers. This page, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportTemp"
-        echo '    <p>&nbsp;</p>' >> "$MoodleReportTemp"
-	    echo '    <p>Search for course: <input id="searchbar" onkeyup="search_course()" type="text"	name="search" placeholder="Search..."></p>' >> "$MoodleReportTemp"
-        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportTemp"
-        echo '    <table id="jobe">' >> "$MoodleReportTemp"
-        echo '      <tbody>' >> "$MoodleReportTemp"
-        echo '          <tr><th onclick="sortTable(0)">Course fullname</th><th onclick="sortTable(1)">Course shortname</th><th onclick="sortTable(2)">Role</th><th align="right" onclick="sortTable(3)">Count</th><th align="right" onclick="sortTable(4)">Enrolled</th></tr>' >> "$MoodleReportTemp"
-        cat "$TableHTMLFile" >> "$MoodleReportTemp"
-        echo '      </tbody>' >> "$MoodleReportTemp"
-        echo '    </table>' >> "$MoodleReportTemp"
-        echo '' >> "$MoodleReportTemp"
-        echo "  </section>" >> "$MoodleReportTemp"
-        echo '  <p align="center"><em>Report generated by &#8220;moodle-usage-report&#8221; (<a href="https://github.com/Peter-Moller/moodle-usage-report" '$LinkReferer'>GitHub</a> <span class="glyphicon">&#xe164;</span>)</em></p>' >> "$MoodleReportTemp"
-        echo '  <p align="center"><em>Department of Computer Science, LTH/LU</em></p>' >> "$MoodleReportTemp"
-        echo "</div>" >> "$MoodleReportTemp"
-        echo "</body>" >> "$MoodleReportTemp"
-        echo "</html>" >> "$MoodleReportTemp"
+    if grep "Moodle usage report for" "$MoodleReportFile" &>/dev/null ; then
+        echo "<body>" >> "$MoodleReportFile"
+        echo '<div class="main_page">' >> "$MoodleReportFile"
+        echo '  <div class="flexbox-container">' >> "$MoodleReportFile"
+        echo '    <div id="box-header">' >> "$MoodleReportFile"
+        echo "      <h3>Moodle usage report for</h3>" >> "$MoodleReportFile"
+        echo "      <h1>$ServerName</h1>" >> "$MoodleReportFile"
+        echo "      <h4>$(date "+%Y-%m-%d %R")</h4>" >> "$MoodleReportFile"
+        echo "    </div>" >> "$MoodleReportFile"
+        echo "  </div>" >> "$MoodleReportFile"
+        echo "  <section>" >> "$MoodleReportFile"
+        echo "    <p>&nbsp;</p>" >> "$MoodleReportFile"
+        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
+        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
+        echo '    <p align="left">Below is a presentation of a <code>SQL</code>-question put to the moodle database that aggregates the numbers of various roles that have been active in the moodle server '$DayText'.</p>' >> "$MoodleReportFile"
+        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
+        echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. </p>' >> "$MoodleReportFile"
+        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
+	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. You can sort the table by clicking on the column headers. This page, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportFile"
+        echo '    <p>&nbsp;</p>' >> "$MoodleReportFile"
+	    echo '    <p>Search for course: <input id="searchbar" onkeyup="search_course()" type="text"	name="search" placeholder="Search..."></p>' >> "$MoodleReportFile"
+        echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
+        echo '    <table id="jobe">' >> "$MoodleReportFile"
+        echo '      <tbody>' >> "$MoodleReportFile"
+        echo '          <tr><th onclick="sortTable(0)">Course fullname</th><th onclick="sortTable(1)">Course shortname</th><th onclick="sortTable(2)">Role</th><th align="right" onclick="sortTable(3)">Count</th><th align="right" onclick="sortTable(4)">Enrolled</th></tr>' >> "$MoodleReportFile"
+        cat "$TableTempFile" >> "$MoodleReportFile"
+        echo '      </tbody>' >> "$MoodleReportFile"
+        echo '    </table>' >> "$MoodleReportFile"
+        echo '' >> "$MoodleReportFile"
+        echo "  </section>" >> "$MoodleReportFile"
+        echo '  <p align="center"><em>Report generated by &#8220;moodle-usage-report&#8221; (<a href="https://github.com/Peter-Moller/moodle-usage-report" '$LinkReferer'>GitHub</a> <span class="glyphicon">&#xe164;</span>)</em></p>' >> "$MoodleReportFile"
+        echo '  <p align="center"><em>Department of Computer Science, LTH/LU</em></p>' >> "$MoodleReportFile"
+        echo "</div>" >> "$MoodleReportFile"
+        echo "</body>" >> "$MoodleReportFile"
+        echo "</html>" >> "$MoodleReportFile"
     else
-        echo "<body>" >> "$MoodleReportTemp"
+        echo "<body>" >> "$MoodleReportFile"
         echo "<h1>Could not get $ReportHead!!</h1>"
-        echo "</body>" >> "$MoodleReportTemp"
-        echo "</html>" >> "$MoodleReportTemp"
+        echo "</body>" >> "$MoodleReportFile"
+        echo "</html>" >> "$MoodleReportFile"
     fi
 
 }
 
 
 ################################################################################
-# Copy the HTML-file to remote server
+# Copy the HTML-file to remote server and remove temp-files
 # Globals:
 #   MoodleReportTemp
 # From Settings-file:
@@ -276,8 +302,13 @@ assemble_web_page() {
 # Outputs:
 #   Nothing
 ################################################################################
-copy_result() {
-    scp "${MoodleReportTemp}" "${SCP_USER}@${SCP_HOST}:${SCP_DIR}/index.html" &>/dev/null
+copy_and_clean() {
+    # rsync the local directories
+    #scp "$MoodleReportFile" "${SCP_USER}@${SCP_HOST}:${SCP_DIR}/index.html" &>/dev/null
+    rsync -avz -e ssh "$LOCAL_DIR/" "${SCP_USER}@${SCP_HOST}:${SCP_DIR}/"
+
+    # Delete tempfiles:
+    #rm "$TableTempFile"
 }
 
 
@@ -294,12 +325,7 @@ copy_result() {
 ################################################################################
 day_total_users() {
     if [ "$DayTurn" = "true" ]; then
-        if [ $TODAY -eq 7 ]; then
-            local SundayMarking='*'
-        else
-            local SundayMarking=''
-        fi
-        ssh ${SCP_USER}@${SCP_HOST} "echo \"$TODAY$SundayMarking	$MoodleActiveUsersToday\" >> ${SCP_DIR}/Total_users_$THIS_YEAR.txt" &>/dev/null
+        echo "$TODAY	$MoodleActiveUsersToday	$SundayMarking" >> "$LOCAL_DIR/$THIS_YEAR/DAILY_SUMMARIES_$THIS_YEAR.txt" &>/dev/null
     fi
 }
 
@@ -315,8 +341,9 @@ day_total_users() {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
+check_directories
 get_sql_data
 generate_html_table
 assemble_web_page
-copy_result
 day_total_users
+copy_and_clean
