@@ -8,7 +8,10 @@
 # in the course during the day. This line is updated (replaced with new values) during the day.
 
 source ~/.moodle_usage_report.settings
-CSS_colorfix="s/jobe_th_bgc/$jobe_th_bgc/g;s/jobe_th_c/$jobe_th_c/g;s/box_h_bgc/$box_h_bgc/g;s/box_h_c/$box_h_c/g"
+MoodleBlue="#194866"
+MoodleOrange="#F98012"
+#CSS_colorfix="s/jobe_th_bgc/$jobe_th_bgc/g;s/jobe_th_c/$jobe_th_c/g;s/box_h_bgc/$box_h_bgc/g;s/box_h_c/$box_h_c/g"
+CSS_colorfix="s/jobe_th_bgc/$MoodleBlue/g;s/jobe_th_c/$jobe_th_c/g;s/box_h_bgc/$box_h_bgc/g;s/box_h_c/$box_h_c/g"
 NL=$'\n'
 TitleString="Moodle usage report for “$ServerName” on $(date +%F" "+%T)"
 export LC_ALL=en_US.UTF-8
@@ -20,25 +23,18 @@ if [ $(date +%H) -eq 0 ]; then
     SQL_TIME="UNIX_TIMESTAMP() - 86400"
     DayText="during $(date +%F -d '1 day ago')"
     DayTurn=true
-    TODAY=$(date +%F -d'1 day ago')    # Ex: TODAY=2025-06-25
-    if [ $(date +%u -d'1 day ago') -eq 7 ]; then
-        local SundayMarking='Sunday'
-    else
-        local SundayMarking=''
-    fi
+    TODAY=$(date +%F -d'1 day ago')              # Ex: TODAY=2025-06-25
+    DayName="$(date +%A -d'1 day ago')"          # Ex: DayName=Sunday
     THIS_YEAR=$(date +%G -d'1 day ago') 
 else
     SQL_TIME="UNIX_TIMESTAMP(CURDATE())"
     DayText="since midnight today"
     DayTurn="false"
-    TODAY=$(date +%F)                  # Ex: TODAY=2025-06-26
-    THIS_YEAR=$(date +%G)              # Ex: THIS_YEAR=2025
-    if [ $(date +%u) -eq 7 ]; then
-        local SundayMarking='Sunday'
-    else
-        local SundayMarking=''
-    fi
+    TODAY=$(date +%F)                            # Ex: TODAY=2025-06-26
+    THIS_YEAR=$(date +%G)                        # Ex: THIS_YEAR=2025
+    DayName="$(date +%A)"                        # Ex: DayName=Monday
 fi
+DailySummaryFile="$LOCAL_DIR/$THIS_YEAR/DAILY_SUMMARIES_$THIS_YEAR.txt"
 
 
 
@@ -188,15 +184,15 @@ get_sql_data() {
 # Outputs:
 #   Noting
 ################################################################################
-fix_course_page() {
+update_course_page() {
     local FILE="${LOCAL_DIR}/${THIS_YEAR}/${MyShortname}.txt"
     if [ ! -f "$FILE" ]; then
-        echo -e "${TODAY}  $count	$SundayMarking" > "$FILE"
+        echo -e "${TODAY}  $count	$DayName" > "$FILE"
     else
-        if grep -q "^${TODAY}" "\$FILE"; then
-            sed -i "/^${TODAY}/c\\${TODAY}  $count	$SundayMarking" "$FILE"
+        if grep -q "^${TODAY}" "$FILE"; then
+            sed -i "/^${TODAY}/c\\${TODAY}  $count	$DayName" "$FILE"
         else
-            echo -e "${TODAY}  $count	$SundayMarking" >> "$FILE"
+            echo -e "${TODAY}  $count	$DayName" >> "$FILE"
         fi
     fi
 }
@@ -220,7 +216,7 @@ generate_html_table() {
     do
         if [ "$role" = "student" ]; then
             MyShortname="$(echo "$shortname" | sed 's:[ /]:_:g; s/[åä]/a/g; s/ö/o/g')"                      # Ex: MyShortname=EDAA10_-_HT24_-_Hbg
-            fix_course_page
+            update_course_page
         fi
         CourseFullNameCell="<a href=\"https://$ServerName/course/view.php?id=$id\" $LinkReferer>$course</a>"
         CourseShortNameCell="<a href=\"$THIS_YEAR/${MyShortname}.txt\" $LinkReferer>$shortname</a>"
@@ -249,11 +245,15 @@ assemble_web_page() {
     if grep "Moodle usage report for" "$MoodleReportFile" &>/dev/null ; then
         echo "<body>" >> "$MoodleReportFile"
         echo '<div class="main_page">' >> "$MoodleReportFile"
-        echo '  <div class="flexbox-container">' >> "$MoodleReportFile"
+        echo '  <div class="flexbox-cont// Add sort indicator
+const arrow = dir === "asc" ? " \u25B2" : " \u25BC";
+headers[n].classList.add(dir === "asc" ? "sorted-asc" : "sorted-desc");
+headers[n].textContent += arrow;
+ainer">' >> "$MoodleReportFile"
         echo '    <div id="box-header">' >> "$MoodleReportFile"
         echo "      <h3>Moodle usage report for</h3>" >> "$MoodleReportFile"
-        echo "      <h1>$ServerName</h1>" >> "$MoodleReportFile"
-        echo "      <h4>$(date "+%Y-%m-%d %R")</h4>" >> "$MoodleReportFile"
+        echo "      <h1 style=\"color: $MoodleOrange;\">$ServerName</h1>" >> "$MoodleReportFile"
+        echo "      <h4>$(date "+%A %Y-%m-%d %R %Z")</h4>" >> "$MoodleReportFile"
         echo "    </div>" >> "$MoodleReportFile"
         echo "  </div>" >> "$MoodleReportFile"
         echo "  <section>" >> "$MoodleReportFile"
@@ -262,7 +262,7 @@ assemble_web_page() {
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
         echo '    <p align="left">Below is a presentation of a <code>SQL</code>-question put to the moodle database that aggregates the numbers of various roles that have been active in the moodle server '$DayText'.</p>' >> "$MoodleReportFile"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
-        echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. </p>' >> "$MoodleReportFile"
+        echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LinkReferer'>here</a>.</p>' >> "$MoodleReportFile"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
 	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. You can sort the table by clicking on the column headers. This page, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportFile"
         echo '    <p>&nbsp;</p>' >> "$MoodleReportFile"
@@ -294,6 +294,27 @@ assemble_web_page() {
 
 
 ################################################################################
+# At the turn of the day, add one row to the 'total' file
+# Globals:
+#   DayTurn, MoodleActiveUsersToday, TODAY, THIS_YEAR
+# From Settings-file:
+#   SCP_USER, SCP_HOST, SCP_DIR
+# Arguments:
+#   None
+# Outputs:
+#   Nothing
+################################################################################
+day_total_users() {
+    if [ "$DayTurn" = "true" ]; then
+        if [ ! -f "$DailySummaryFile" ]; then
+            echo "Date	∑ students	∑ courses" > "$DailySummaryFile"
+        fi
+        echo "$TODAY	$MoodleActiveUsersToday	$NumCourses	$DayName" >> "$DailySummaryFile"
+    fi
+}
+
+
+################################################################################
 # Copy the HTML-file to remote server and remove temp-files
 # Globals:
 #   MoodleReportTemp
@@ -307,28 +328,10 @@ assemble_web_page() {
 copy_and_clean() {
     # rsync the local directories
     #scp "$MoodleReportFile" "${SCP_USER}@${SCP_HOST}:${SCP_DIR}/index.html" &>/dev/null
-    rsync -avz -e ssh "$LOCAL_DIR/" "${SCP_USER}@${SCP_HOST}:${SCP_DIR}/"
+    rsync -avz -e ssh "$LOCAL_DIR/" "${SCP_USER}@${SCP_HOST}:${SCP_DIR}/" &>/dev/null
 
     # Delete tempfiles:
     #rm "$TableTempFile"
-}
-
-
-################################################################################
-# At the turn of the day, add one row to the 'total' file
-# Globals:
-#   DayTurn, MoodleActiveUsersToday, TODAY, THIS_YEAR
-# From Settings-file:
-#   SCP_USER, SCP_HOST, SCP_DIR
-# Arguments:
-#   None
-# Outputs:
-#   Nothing
-################################################################################
-day_total_users() {
-    if [ "$DayTurn" = "true" ]; then
-        echo "$TODAY	$MoodleActiveUsersToday	$SundayMarking" >> "$LOCAL_DIR/$THIS_YEAR/DAILY_SUMMARIES_$THIS_YEAR.txt" &>/dev/null
-    fi
 }
 
 
