@@ -28,7 +28,7 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
 
 ## 📸 Example Output
 
-![Screendump of report](moodle-usage-report_example_sm.png)
+![Screendump of report](moodle-usage-report_example.png)
 
 ---
 
