@@ -260,7 +260,11 @@ assemble_web_page() {
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
         echo '    <p align="left">Below is a presentation of a <code>SQL</code>-question put to the moodle database that aggregates the numbers of various roles that have been active in the moodle server '$DayText'.</p>' >> "$MoodleReportFile"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
-        echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LinkReferer'>here</a>.</p>' >> "$MoodleReportFile"
+        if [ -n "$TableText" ]; then
+            echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LinkReferer'>here</a>.</p>' >> "$MoodleReportFile"
+        else
+            echo '    <p align="left">No users have logged in to '$ServerName' since midnight. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LinkReferer'>here</a>.</p>' >> "$MoodleReportFile"
+        fi
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
 	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. You can sort the table by clicking on the column headers. This page, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportFile"
         echo '    <p>&nbsp;</p>' >> "$MoodleReportFile"
