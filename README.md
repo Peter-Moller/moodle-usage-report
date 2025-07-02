@@ -59,22 +59,22 @@ This project is licensed under the 2-clause BSD License — see [LICENSE]or deta
    ```
 2. Create a settings-file, `~/.moodle_usage_report.settings` containing the following items (customise to your local need):
    ```bash
-   Blue="#22458a"                                        # Dark blue color to use (not Moodles color!)
-   Orange="#F9A510"                                      # Orange color to use (not Moodles color!)
-   box_h_bgc=$Blue                                       # Box header background color
-   box_h_c=white                                         # Box header text color
+   BLUE="#22458a"                                        # Dark blue color to use (not Moodles color!)
+   ORANGE="#F9A510"                                      # Orange color to use (not Moodles color!)
+   BOX_H_bgc=$BLUE                                       # Box header background color
+   BOX_H_c=white                                         # Box header text color
    COURSE_ID_TO_HIDE="1034, 102"                         # Comma-separated list of courses to NOT present
    DB_COMMAND="docker exec moodledb /usr/bin/mariadb"    # Command to get into the database
-   DB_User=DB_username                                   # User account to get into the database
+   DB_USER=DB_username                                   # User account to get into the database
    DB_PASSWORD=SuperSecretPassword                       # Password
-   jobe_th_bgc=$Blue                                     # Table head background color
-   jobe_th_c=white                                       # Table head text color
-   jobe_th_sorted_bgc=#2A55AC                            # Table head background color for sorting
-   jobe_tr_hoverc=#bad8e1                                # Table row background color when mouse is hovering
+   JOBE_TH_BGC=$BLUE                                     # Table head background color
+   JOBE_TH_C=white                                       # Table head text color
+   JOBE_TH_SORTED_BGC=#2A55AC                            # Table head background color for sorting
+   JOBE_TR_HOVERC=#bad8e1                                # Table row background color when mouse is hovering
    LOCAL_DIR=/var/tmp/moodle                             # Local directory to store the output from the script
    LOCAL_PROCESSING=                                     # Name of script to use for local processing of the table data
-   ReportHead=https://fileadmin.cs.lth.se/intern/html/custom_report_head_sorting.html
-   ServerName=moodle.example.dns                         # Name of the moodle-server that is being presented
+   REPORT_HEAD=https://fileadmin.cs.lth.se/intern/html/custom_report_head_sorting.html
+   SERVER_NAME=moodle.example.dns                         # Name of the moodle-server that is being presented
    RSYNC_HOST=web-server.some.dns                        # DNS-name for the server that will publish the result
    RSYNC_DIR=/some/dir/moodle                            # Where on that server to put the files
    RSYNC_USER=remoteuser                                 # User name to use with rsync

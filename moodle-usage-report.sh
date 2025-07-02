@@ -8,12 +8,12 @@
 # in the course during the day. This line is updated (replaced with new values) during the day.
 
 source ~/.moodle_usage_report.settings
-CSS_colorfix="s/jobe_th_bgc/$Blue/g; s/jobe_th_c/$jobe_th_c/g; s/box_h_bgc/$Blue/g; s/box_h_c/$box_h_c/g; s/Orange/$Orange/; s/jobe_th_sorted_bgc/$jobe_th_sorted_bgc/"
-# Ex: CSS_colorfix='s/jobe_th_bgc/#22458a/g; s/jobe_th_c/white/g; s/box_h_bgc/#22458a/g; s/box_h_c/white/g; s/Orange/#F9A510/; s/jobe_th_sorted_bgc/#2A55AC/'
+CSS_COLORFIX="s/JOBE_TH_BGC/$BLUE/g; s/JOBE_TH_C/$JOBE_TH_C/g; s/BOX_H_BGC/$BLUE/g; s/BOX_H_C/$BOX_H_C/g; s/ORANGE/$ORANGE/; s/JOBE_TH_SORTED_BGC/$JOBE_TH_SORTED_BGC/"
+# Ex: CSS_COLORFIX='s/JOBE_TH_BGC/#22458a/g; s/JOBE_TH_C/white/g; s/BOX_H_BGC/#22458a/g; s/BOX_H_C/white/g; s/ORANGE/#F9A510/; s/JOBE_TH_SORTED_BGC/#2A55AC/'
 NL=$'\n'
-TitleString="Moodle usage report for “$ServerName” on $(date +%F" "+%T)"
+TITLE_STRING="Moodle usage report for “$SERVER_NAME” on $(date +%F" "+%T)"
 export LC_ALL=en_US.UTF-8
-LinkReferer='target="_blank" rel="noopener noreferrer"'
+LINKREFERER='target="_blank" rel="noopener noreferrer"'
 
 # Determine if the run time is 00:00. 
 # If so, we must have a different SQL question and present slightly different text
@@ -22,7 +22,7 @@ if [ $(date +%H) -eq 0 ]; then
     DayText="during $(date +%F -d '1 day ago')"
     DayTurn=true
     TODAY=$(date +%F -d'1 day ago')              # Ex: TODAY=2025-06-25
-    DayName="$(date +%A -d'1 day ago')"          # Ex: DayName=Sunday
+    DAYNAME="$(date +%A -d'1 day ago')"          # Ex: DAYNAME=Sunday
     THIS_YEAR=$(date +%G -d'1 day ago') 
 else
     SQL_TIME="UNIX_TIMESTAMP(CURDATE())"
@@ -30,7 +30,7 @@ else
     DayTurn="false"
     TODAY=$(date +%F)                            # Ex: TODAY=2025-06-26
     THIS_YEAR=$(date +%G)                        # Ex: THIS_YEAR=2025
-    DayName="$(date +%A)"                        # Ex: DayName=Monday
+    DAYNAME="$(date +%A)"                        # Ex: DAYNAME=Monday
 fi
 DailySummaryFile="$LOCAL_DIR/$THIS_YEAR/DAILY_SUMMARIES_$THIS_YEAR.txt"
 
@@ -78,7 +78,7 @@ check_directories() {
 ################################################################################
 get_sql_data() {
     # Get the number of active people today:
-    MoodleActiveUsersToday="$($DB_COMMAND -u$DB_User -p"$DB_PASSWORD" -NB -e "USE moodle; SELECT COUNT(*) FROM mdl_user WHERE lastaccess > $SQL_TIME" 2>/dev/null)"  # Ex: MoodleActiveUsersToday=116
+    MoodleActiveUsersToday="$($DB_COMMAND -u$DB_USER -p"$DB_PASSWORD" -NB -e "USE moodle; SELECT COUNT(*) FROM mdl_user WHERE lastaccess > $SQL_TIME" 2>/dev/null)"  # Ex: MoodleActiveUsersToday=116
 
     SQLQ="USE moodle;WITH active_people AS (
       SELECT 
@@ -141,7 +141,7 @@ get_sql_data() {
     ORDER BY 
       ap.\`active course\`, ap.ROLE;"
 
-    TableTextRaw="$($DB_COMMAND -u$DB_User -p$DB_PASSWORD -NB -e "$SQLQ" | tail -n +2)"
+    TableTextRaw="$($DB_COMMAND -u$DB_USER -p$DB_PASSWORD -NB -e "$SQLQ" | tail -n +2)"
     # Ex:
     # TableTextRaw='editingteacher	EDAA01 Programmeringsteknik fördjupningskurs sommar 2025	EDAA01 sommar25	1103	358	1
     #               student	EDAA01 Programmeringsteknik fördjupningskurs sommar 2025	EDAA01 sommar25	1103	358	68
@@ -163,11 +163,17 @@ get_sql_data() {
     # Get the number of courses as well:
     NumCourses=$(echo "$TableText" | awk -F $'\t' '{print $2}' | sort -u | wc -l)        # Ex: NumCourses=28
     if [ $NumCourses -gt 5 ]; then
-        CourseText="and been active in <strong>$NumCourses</strong> courses "
+        local CourseText="and been active in <strong>$NumCourses</strong> courses "
     else
-        CourseText=""
+        local CourseText=""
     fi
 
+    # Deal with no activity since midnight:
+    if [ -n "$TableText" ]; then
+        MoodleActivityText='<p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$SERVER_NAME' '$CourseText$DayText'. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LINKREFERER'>here</a>.</p>'
+    else
+        MoodleActivityText='<p align="left">No users have logged in to '$SERVER_NAME' since midnight. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LINKREFERER'>here</a>.</p>'
+    fi
 }
 
 
@@ -185,12 +191,12 @@ get_sql_data() {
 update_course_page() {
     local FILE="${LOCAL_DIR}/${THIS_YEAR}/${MyShortname}.txt"
     if [ ! -f "$FILE" ]; then
-        echo -e "${TODAY}  $count	$DayName" > "$FILE"
+        echo -e "${TODAY}  $count	$DAYNAME" > "$FILE"
     else
         if grep -q "^${TODAY}" "$FILE"; then
-            sed -i "/^${TODAY}/c\\${TODAY}  $count	$DayName" "$FILE"
+            sed -i "/^${TODAY}/c\\${TODAY}  $count	$DAYNAME" "$FILE"
         else
-            echo -e "${TODAY}  $count	$DayName" >> "$FILE"
+            echo -e "${TODAY}  $count	$DAYNAME" >> "$FILE"
         fi
     fi
 }
@@ -200,9 +206,9 @@ update_course_page() {
 # Create a HTML-table element based and
 # create/maintain a file for the specific course
 # Globals:
-#   TableText, shortname, LinkReferer, course
+#   TableText, shortname, LINKREFERER, course
 # From Settings-file:
-#   ServerName
+#   SERVER_NAME
 # Arguments:
 #   None
 # Outputs:
@@ -217,8 +223,8 @@ generate_html_table() {
                 MyShortname="$(echo "$shortname" | sed 's:[ /]:_:g; s/[åä]/a/g; s/ö/o/g')"                      # Ex: MyShortname=EDAA10_-_HT24_-_Hbg
                 update_course_page
             fi
-            CourseFullNameCell="<a href=\"https://$ServerName/course/view.php?id=$id\" $LinkReferer>$course</a>"
-            CourseShortNameCell="<a href=\"$THIS_YEAR/${MyShortname}.txt\" $LinkReferer>$shortname</a>"
+            CourseFullNameCell="<a href=\"https://$SERVER_NAME/course/view.php?id=$id\" $LINKREFERER>$course</a>"
+            CourseShortNameCell="<a href=\"$THIS_YEAR/${MyShortname}.txt\" $LINKREFERER>$shortname</a>"
             echo '          <tr class="course"><td align="left">'$CourseFullNameCell'</td><td align="left">'$CourseShortNameCell'</td><td align="left">'$role'</td><td align="right">'$count'</td><td align="right">'$enrolled'</td></tr>' >> $TableTempFile
         done
     else
@@ -231,7 +237,7 @@ generate_html_table() {
 ################################################################################
 # Create the HTML page
 # Globals:
-#   TitleString, CSS_colorfix, TableTempFile
+#   TITLE_STRING, CSS_COLORFIX, TableTempFile
 # From Settings-file:
 #   ReportHead
 # Arguments:
@@ -242,7 +248,7 @@ generate_html_table() {
 assemble_web_page() {
     MoodleReportFile=$LOCAL_DIR/index.html
     # Get the head of the custom report, replace SERVER and DATE
-    curl --silent $ReportHead | sed "s/TITLE/$TitleString/;$CSS_colorfix;s/Backup/SQL/;s/1200/1250/" > "$MoodleReportFile"
+    curl --silent $REPORT_HEAD | sed "s/TITLE_STRING/$TITLE_STRING/; $CSS_COLORFIX" > "$MoodleReportFile"
     # Only continue if it worked
     if grep "Moodle usage report for" "$MoodleReportFile" &>/dev/null ; then
         echo "<body>" >> "$MoodleReportFile"
@@ -250,7 +256,7 @@ assemble_web_page() {
         echo '  <div class="flexbox-container">' >> "$MoodleReportFile"
         echo '    <div id="box-header">' >> "$MoodleReportFile"
         echo "      <h3>Moodle usage report for</h3>" >> "$MoodleReportFile"
-        echo "      <h1 style=\"color: $Orange;\">$ServerName</h1>" >> "$MoodleReportFile"
+        echo "      <h1 style=\"color: $ORANGE;\">$SERVER_NAME</h1>" >> "$MoodleReportFile"
         echo "      <h4>$(date "+%A %Y-%m-%d %R %Z")</h4>" >> "$MoodleReportFile"
         echo "    </div>" >> "$MoodleReportFile"
         echo "  </div>" >> "$MoodleReportFile"
@@ -260,11 +266,7 @@ assemble_web_page() {
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
         echo '    <p align="left">Below is a presentation of a <code>SQL</code>-question put to the moodle database that aggregates the numbers of various roles that have been active in the moodle server '$DayText'.</p>' >> "$MoodleReportFile"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
-        if [ -n "$TableText" ]; then
-            echo '    <p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$ServerName' '$CourseText$DayText'. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LinkReferer'>here</a>.</p>' >> "$MoodleReportFile"
-        else
-            echo '    <p align="left">No users have logged in to '$ServerName' since midnight. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LinkReferer'>here</a>.</p>' >> "$MoodleReportFile"
-        fi
+        echo "    $MoodleActivityText" >> "$MoodleReportFile"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
 	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. You can sort the table by clicking on the column headers. This page, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportFile"
         echo '    <p>&nbsp;</p>' >> "$MoodleReportFile"
@@ -280,11 +282,11 @@ assemble_web_page() {
         echo '    </table>' >> "$MoodleReportFile"
         echo '' >> "$MoodleReportFile"
         echo "  </section>" >> "$MoodleReportFile"
-        echo '  <p align="center"><em>Report generated by &#8220;moodle-usage-report&#8221; (<a href="https://github.com/Peter-Moller/moodle-usage-report" '$LinkReferer'>GitHub</a> <span class="glyphicon">&#xe164;</span>)</em></p>' >> "$MoodleReportFile"
+        echo '  <p align="center"><em>Report generated by &#8220;moodle-usage-report&#8221; (<a href="https://github.com/Peter-Moller/moodle-usage-report" '$LINKREFERER'>GitHub</a> <span class="glyphicon">&#xe164;</span>)</em></p>' >> "$MoodleReportFile"
         echo '  <p align="center"><em>Department of Computer Science, LTH/LU</em></p>' >> "$MoodleReportFile"
         echo '  <hr>' >> "$MoodleReportFile"
-        echo '  <p align="center" style="color: '$Blue';">This tool is an independent project and is not affiliated with or endorsed by Moodle Pty Ltd. ‘Moodle’ is a registered trademark of Moodle Pty Ltd.<br>' >> "$MoodleReportFile"
-        echo '  Learn more about Moodle at <a href="https://moodle.com/" '$LinkReferer'>moodle.com</a> (commercial services) and <a href="https://moodle.org" '$LinkReferer'>moodle.org</a> (community hub)</p>' >> "$MoodleReportFile"
+        echo '  <p align="center" style="color: '$BLUE';">This tool is an independent project and is not affiliated with or endorsed by Moodle Pty Ltd. ‘Moodle’ is a registered trademark of Moodle Pty Ltd.<br>' >> "$MoodleReportFile"
+        echo '  Learn more about Moodle at <a href="https://moodle.com/" '$LINKREFERER'>moodle.com</a> (commercial services) and <a href="https://moodle.org" '$LINKREFERER'>moodle.org</a> (community hub)</p>' >> "$MoodleReportFile"
         echo "</div>" >> "$MoodleReportFile"
         echo "</body>" >> "$MoodleReportFile"
         echo "</html>" >> "$MoodleReportFile"
@@ -314,7 +316,7 @@ day_total_users() {
         if [ ! -f "$DailySummaryFile" ]; then
             echo "Date	∑ students	∑ courses" > "$DailySummaryFile"
         fi
-        echo "$TODAY	$MoodleActiveUsersToday	$NumCourses	$DayName" >> "$DailySummaryFile"
+        echo "$TODAY	${MoodleActiveUsersToday:-0}	${NumCourses:-0}	$DAYNAME" >> "$DailySummaryFile"
     fi
 }
 
