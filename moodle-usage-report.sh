@@ -311,13 +311,21 @@ assemble_web_page() {
 # Outputs:
 #   Nothing
 ################################################################################
-day_total_users() {
+dayturn_fixes() {
     if [ "$DayTurn" = "true" ]; then
         if [ ! -f "$DailySummaryFile" ]; then
             echo "Date	∑ students	∑ courses" > "$DailySummaryFile"
         fi
         echo "$TODAY	${MoodleActiveUsersToday:-0}	${NumCourses:-0}	$DAYNAME" >> "$DailySummaryFile"
     fi
+
+    # Add data to files with no current day in them
+    for FILE in $LOCAL_DIR/$THIS_YEAR/*
+    do
+        if [ -z "$(grep -E "^$TODAY" $FILE)" ]; then
+            echo "$TODAY	0	$DAYNAME" >> "$FILE"
+        fi
+    done
 }
 
 
@@ -332,7 +340,7 @@ day_total_users() {
 # Outputs:
 #   Nothing
 ################################################################################
-copy_and_clean() {
+rsync_and_cleanup() {
     # rsync the local directories
     rsync -avz -e ssh "$LOCAL_DIR/" "${RSYNC_USER}@${RSYNC_HOST}:${RSYNC_DIR}/" &>/dev/null
 
@@ -356,5 +364,5 @@ check_directories
 get_sql_data
 generate_html_table
 assemble_web_page
-day_total_users
-copy_and_clean
+dayturn_fixes
+rsync_and_cleanup
