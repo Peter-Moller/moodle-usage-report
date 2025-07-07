@@ -14,6 +14,7 @@ NL=$'\n'
 TITLE_STRING="Moodle usage report for “$SERVER_NAME” on $(date +%F" "+%T)"
 export LC_ALL=en_US.UTF-8
 LINKREFERER='target="_blank" rel="noopener noreferrer"'
+BASIC_DATA_FILE='/tmp/.basic_moodle_data'
 
 # Determine if the run time is 00:00. 
 # If so, we must have a different SQL question and present slightly different text
@@ -32,7 +33,7 @@ else
     THIS_YEAR=$(date +%G)                        # Ex: THIS_YEAR=2025
     DAYNAME="$(date +%A)"                        # Ex: DAYNAME=Monday
 fi
-DailySummaryFile="$LOCAL_DIR/$THIS_YEAR/DAILY_SUMMARIES_$THIS_YEAR.txt"
+DailySummaryFile="$LOCAL_DIR/DAILY_SUMMARIES_$THIS_YEAR.txt"
 
 
 
@@ -61,6 +62,53 @@ check_directories() {
     if [ ! -d "$LOCAL_DIR/$THIS_YEAR" ]; then
         mkdir -p "$LOCAL_DIR/$THIS_YEAR"
     fi
+}
+
+
+################################################################################
+# Get basic data about moodle
+# Globals:
+#   THIS_YEAR
+# From Settings-file:
+#   DB_COMMAND, DB_DockerName, DB_User, DB_PASSWORD
+# Arguments:
+#   None
+# Outputs:
+#   Nothing
+################################################################################
+get_basic_moodle_data() {
+    if [ "$DayTurn" = "true" ] || [ ! -f "$BASIC_DATA_FILE" ]; then
+        MoodleRelease=$($DB_COMMAND -u$DB_USER -p"$DB_PASSWORD" -NB -e "USE moodle; SELECT VALUE FROM mdl_config WHERE name = 'release'" | awk '{print $1}')      # Ex: MoodleRelease=4.5.5
+        echo "MoodleRelease	$MoodleRelease" > $BASIC_DATA_FILE
+        MoodleUsersTotal=$($DB_COMMAND -u$DB_USER -p"$DB_PASSWORD" -NB -e "USE moodle; SELECT COUNT(*) FROM mdl_user")                                            # Ex: MoodleUsersTotal=12812
+        echo "MoodleUsersTotal	$MoodleUsersTotal" >> $BASIC_DATA_FILE
+        MoodleUsersNotDeleted=$($DB_COMMAND -u$DB_USER -p"$DB_PASSWORD" -NB -e "USE moodle; SELECT COUNT(*) FROM mdl_user WHERE deleted = 0")                     # Ex: MoodleUsersNotDeleted=9518
+        echo "MoodleUsersNotDeleted	$MoodleUsersNotDeleted" >> $BASIC_DATA_FILE
+        MoodleUsersDeleted=$($DB_COMMAND -u$DB_USER -p"$DB_PASSWORD" -NB -e "USE moodle; SELECT COUNT(*) FROM mdl_user WHERE deleted = 1")                        # Ex: MoodleUsersDeleted=3294
+        echo "MoodleUsersDeleted	$MoodleUsersDeleted" >> $BASIC_DATA_FILE
+        SQLUsers6mon="USE moodle; SELECT COUNT(*) FROM mdl_user WHERE lastaccess > UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 6 MONTH))"
+        MoodleUsers6mon=$($DB_COMMAND -u$DB_USER -p"$DB_PASSWORD" -NB -e "$SQLUsers6mon")                                                                         # Ex: MoodleUsers6mon=3538
+        echo "MoodleUsers6mon	$MoodleUsers6mon" >> $BASIC_DATA_FILE
+        SQLUserRoles="USE moodle; SELECT r.shortname AS role, COUNT(DISTINCT ra.userid) AS user_count FROM mdl_role r JOIN mdl_role_assignments ra ON ra.roleid = r.id JOIN mdl_context ctx ON ctx.id = ra.contextid JOIN mdl_user u ON u.id = ra.userid WHERE u.deleted = 0   AND ctx.contextlevel = 10 GROUP BY r.shortname ORDER BY user_count DESC"
+        MoodleUserRoles=$($DB_COMMAND -u$DB_USER -p"$DB_PASSWORD" -NB -e "$SQLUserRoles")
+        # Ex: MoodleUserRoles='coursecreator	28
+        #                      viewingteacher	23
+        #                      questionsharer	9
+        #                      manager	7'
+        MoodleCourseCreators=$(echo "$MoodleUserRoles" | grep coursecreator | awk '{print $NF}')                                                                  # Ex: MoodleCourseCreators=28
+        echo "MoodleCourseCreators	$MoodleCourseCreators" >> $BASIC_DATA_FILE
+        MoodleManagers=$(echo "$MoodleUserRoles" | grep manager | awk '{print $NF}')                                                                              # Ex: MoodleManagers=7
+        echo "MoodleManagers	$MoodleManagers" >> $BASIC_DATA_FILE
+        SQLCourses6mon="USE moodle; SELECT COUNT(*) AS active_courses FROM mdl_course WHERE visible = 1 AND id != 1 AND startdate >= UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 6 MONTH)) AND (enddate = 0 OR enddate >= UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 6 MONTH)));"
+        MoodleCourses6mon=$($DB_COMMAND -u$DB_USER -p"$DB_PASSWORD" -NB -e "$SQLCourses6mon")                                                                     # Ex: MoodleCourses6mon=31
+        echo "MoodleCourses6mon	$MoodleCourses6mon" >> $BASIC_DATA_FILE
+    else
+        MoodleRelease="$(grep MoodleRelease $BASIC_DATA_FILE | awk '{print $NF}')"
+        MoodleUsersNotDeleted=$(grep MoodleUsersNotDeleted $BASIC_DATA_FILE | awk '{print $NF}')
+        MoodleUsers6mon=$(grep MoodleUsers6mon $BASIC_DATA_FILE | awk '{print $NF}')
+        MoodleCourses6mon=$(grep MoodleCourses6mon $BASIC_DATA_FILE | awk '{print $NF}')
+    fi
+    MoodleMetaInfoString="The server runs Moodle version $MoodleRelease and <strong>$(printf "%'d" $MoodleUsers6mon)</strong> (out of $(printf "%'d" $MoodleUsersNotDeleted)) users have been active in <strong>$(printf "%'d" $MoodleCourses6mon)</strong> courses during the last 6 months."
 }
 
 
@@ -170,9 +218,9 @@ get_sql_data() {
 
     # Deal with no activity since midnight:
     if [ -n "$TableText" ]; then
-        MoodleActivityText='<p align="left">In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$SERVER_NAME' '$CourseText$DayText'. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LINKREFERER'>here</a>.</p>'
+        MoodleActivityText='In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$SERVER_NAME' '$CourseText$DayText'. You can find a daily summary for '$THIS_YEAR' <a href="'$DailySummaryFile'" '$LINKREFERER'>here</a>.'
     else
-        MoodleActivityText='<p align="left">No users have logged in to '$SERVER_NAME' since midnight. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LINKREFERER'>here</a>.</p>'
+        MoodleActivityText='No users have logged in to '$SERVER_NAME' since midnight. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LINKREFERER'>here</a>.'
     fi
 }
 
@@ -264,9 +312,10 @@ assemble_web_page() {
         echo "    <p>&nbsp;</p>" >> "$MoodleReportFile"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
-        echo '    <p align="left">Below is a presentation of a <code>SQL</code>-question put to the moodle database that aggregates the numbers of various roles that have been active in the moodle server '$DayText'.</p>' >> "$MoodleReportFile"
+        echo '    <p align="left">The table below is a presentation of a <code>SQL</code>-question put to the moodle database that aggregates the numbers of users of various roles that have been active in the moodle server '$DayText'.</p>' >> "$MoodleReportFile"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
-        echo "    $MoodleActivityText" >> "$MoodleReportFile"
+        echo '    <p align="left">'$MoodleActivityText'</a>' >> "$MoodleReportFile"
+        echo '    <p align="left">'$MoodleMetaInfoString'</a>' >> "$MoodleReportFile"
         echo '    <p align="left">&nbsp;</p>' >> "$MoodleReportFile"
 	    echo '    <p align="left">The “Course fullname”-link goes to the specific course page on moodle and the “Course shortname”-link goes to a local file, containing a running daily count of users on that course. You can sort the table by clicking on the column headers. This page, and the individual pages, are updated every hour, on the hour.</p>' >> "$MoodleReportFile"
         echo '    <p>&nbsp;</p>' >> "$MoodleReportFile"
@@ -361,6 +410,7 @@ rsync_and_cleanup() {
 
 
 check_directories
+get_basic_moodle_data
 get_sql_data
 generate_html_table
 assemble_web_page
