@@ -218,7 +218,7 @@ get_sql_data() {
 
     # Deal with no activity since midnight:
     if [ -n "$TableText" ]; then
-        MoodleActivityText='In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$SERVER_NAME' '$CourseText$DayText'. You can find a daily summary for '$THIS_YEAR' <a href="'$DailySummaryFile'" '$LINKREFERER'>here</a>.'
+        MoodleActivityText='In total, <strong>'$MoodleActiveUsersToday'</strong> individuals have logged in to '$SERVER_NAME' '$CourseText$DayText'. You can find a daily summary for '$THIS_YEAR' <a href="DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LINKREFERER'>here</a>.'
     else
         MoodleActivityText='No users have logged in to '$SERVER_NAME' since midnight. You can find a daily summary for '$THIS_YEAR' <a href="'$THIS_YEAR'/DAILY_SUMMARIES_'$THIS_YEAR'.txt" '$LINKREFERER'>here</a>.'
     fi
